@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react'
 import { useToasts, type Toast, type ToastType } from '../hooks/useToast'
 import { IconCheck, IconX, IconInfo, IconAlert } from './icons'
 
-const typeStyles: Record<ToastType, { bg: string; icon: React.ReactNode }> = {
+const typeStyles: Record<ToastType, { bg: string; icon: ReactNode }> = {
     success: { bg: 'bg-emerald-600 text-white', icon: <IconCheck size={15} /> },
     error: { bg: 'bg-red-600 text-white', icon: <IconX size={15} /> },
     info: { bg: 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900', icon: <IconInfo size={15} /> },

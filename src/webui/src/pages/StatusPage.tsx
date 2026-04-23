@@ -7,7 +7,6 @@ interface StatusPageProps {
     onRefresh: () => void
 }
 
-/** 将毫秒格式化为可读时长 */
 function formatUptime(uptimeMs: number): string {
     const seconds = Math.floor(uptimeMs / 1000)
     const days = Math.floor(seconds / 86400)
@@ -88,7 +87,6 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
 
     return (
         <div className="space-y-6">
-            {/* 统计卡片 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
                 {statCards.map((card) => (
                     <div key={card.label} className="card p-4 hover-lift">
@@ -103,7 +101,6 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                 ))}
             </div>
 
-            {/* 配置概览 */}
             <div className="card p-5 hover-lift animate-fade-in-up">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -116,9 +113,12 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                     </button>
                 </div>
                 <div className="space-y-3">
-                    <InfoRow label="命令前缀" value={config.commandPrefix} />
-                    <InfoRow label="冷却时间" value={`${config.cooldownSeconds} 秒`} />
+                    <InfoRow
+                        label="监控适配器"
+                        value={config.watchedAdapters.length > 0 ? config.watchedAdapters.join(', ') : '全部适配器'}
+                    />
                     <InfoRow label="调试模式" value={config.debug ? '开启' : '关闭'} />
+                    <InfoRow label="健康检查总览" value="/plugin/napcat-plugin-watchdog/api/health" />
                 </div>
             </div>
         </div>
@@ -127,9 +127,9 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex items-center justify-between py-1">
+        <div className="flex items-center justify-between py-1 gap-4">
             <span className="text-xs text-gray-400">{label}</span>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{value}</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-right break-all">{value}</span>
         </div>
     )
 }

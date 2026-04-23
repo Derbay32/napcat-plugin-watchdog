@@ -55,7 +55,6 @@ export default function ConfigPage() {
 
     return (
         <div className="space-y-6 stagger-children">
-            {/* 基础配置 */}
             <div className="card p-5 hover-lift">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-5">
                     <IconTerminal size={16} className="text-gray-400" />
@@ -64,7 +63,7 @@ export default function ConfigPage() {
                 <div className="space-y-5">
                     <ToggleRow
                         label="启用插件"
-                        desc="全局开关，关闭后不响应任何命令"
+                        desc="全局开关，关闭后不再提供健康检查接口"
                         checked={config.enabled}
                         onChange={(v) => updateField('enabled', v)}
                     />
@@ -75,19 +74,14 @@ export default function ConfigPage() {
                         onChange={(v) => updateField('debug', v)}
                     />
                     <InputRow
-                        label="命令前缀"
-                        desc="触发命令的前缀"
-                        value={config.commandPrefix}
-                        onChange={(v) => updateField('commandPrefix', v)}
+                        label="监控适配器"
+                        desc="多个适配器名称用英文逗号分隔，留空表示监控全部适配器"
+                        value={config.watchedAdapters.join(', ')}
+                        onChange={(v) => updateField(
+                            'watchedAdapters',
+                            v.split(',').map(item => item.trim()).filter(Boolean)
+                        )}
                     />
-                    <InputRow
-                        label="冷却时间 (秒)"
-                        desc="同一命令请求冷却时间，0 表示不限制"
-                        value={String(config.cooldownSeconds)}
-                        type="number"
-                        onChange={(v) => updateField('cooldownSeconds', Number(v) || 0)}
-                    />
-                    {/* TODO: 在这里添加你的配置项 */}
                 </div>
             </div>
 
@@ -100,8 +94,6 @@ export default function ConfigPage() {
         </div>
     )
 }
-
-/* ---- 子组件 ---- */
 
 function ToggleRow({ label, desc, checked, onChange }: {
     label: string; desc: string; checked: boolean; onChange: (v: boolean) => void

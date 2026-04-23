@@ -1,10 +1,10 @@
 {
   "name": "napcat-plugin-watchdog",
-  "plugin": "bot 在线监控插件",
+  "plugin": "网络适配器健康检查插件",
   "version": "1.0.0",
   "type": "module",
   "main": "index.mjs",
-  "description": "NapCat bot 在线监控插件",
+  "description": "为 NapCat 网络适配器提供健康检查接口的监控插件",
   "author": "Derbay32",
   "license": "MIT",
   "keywords": [

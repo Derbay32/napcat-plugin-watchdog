@@ -1,32 +1,30 @@
+import type { ReactNode } from 'react'
 import type { PageId } from '../App'
-import { IconDashboard, IconSettings, IconGroup, IconGithub, IconPlugin, IconSun } from './icons'
+import { IconDashboard, IconSettings, IconGithub, IconPlugin, IconSun } from './icons'
 
 interface SidebarProps {
     currentPage: PageId
     onPageChange: (page: PageId) => void
 }
 
-const menuItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
+const menuItems: { id: PageId; label: string; icon: ReactNode }[] = [
     { id: 'status', label: '仪表盘', icon: <IconDashboard size={18} /> },
     { id: 'config', label: '插件配置', icon: <IconSettings size={18} /> },
-    { id: 'groups', label: '群管理', icon: <IconGroup size={18} /> },
 ]
 
 export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
     return (
         <aside className="w-60 flex-shrink-0 bg-white dark:bg-[#1a1b1d] border-r border-gray-200 dark:border-gray-800 flex flex-col">
-            {/* Logo */}
             <div className="px-5 py-6 flex items-center gap-3">
                 <div className="sidebar-logo w-8 h-8 flex items-center justify-center bg-brand-500 rounded-lg text-white">
                     <IconPlugin size={18} />
                 </div>
                 <div>
-                    <h1 className="font-bold text-sm leading-tight text-gray-900 dark:text-white">Plugin Template</h1>
+                    <h1 className="font-bold text-sm leading-tight text-gray-900 dark:text-white">Watchdog</h1>
                     <p className="text-[10px] text-gray-400 font-medium tracking-wider">NAPCAT PLUGIN</p>
                 </div>
             </div>
 
-            {/* Nav */}
             <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto nav-stagger">
                 {menuItems.map((item) => (
                     <div
@@ -40,7 +38,6 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 ))}
             </nav>
 
-            {/* Footer */}
             <div className="px-3 pb-2">
                 <a
                     href="https://github.com"

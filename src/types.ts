@@ -11,29 +11,14 @@
 
 /**
  * 插件主配置接口
- * 在此定义你的插件所需的所有配置项
  */
 export interface PluginConfig {
     /** 全局开关：是否启用插件功能 */
     enabled: boolean;
     /** 调试模式：启用后输出详细日志 */
     debug: boolean;
-    /** 触发命令前缀，默认为 #cmd */
-    commandPrefix: string;
-    /** 同一命令请求冷却时间（秒），0 表示不限制 */
-    cooldownSeconds: number;
-    /** 按群的单独配置 */
-    groupConfigs: Record<string, GroupConfig>;
-    // TODO: 在这里添加你的插件配置项
-}
-
-/**
- * 群配置
- */
-export interface GroupConfig {
-    /** 是否启用此群的功能 */
-    enabled?: boolean;
-    // TODO: 在这里添加群级别的配置项
+    /** 要监控的适配器名称列表，空数组表示监控全部 */
+    watchedAdapters: string[];
 }
 
 // ==================== API 响应 ====================
