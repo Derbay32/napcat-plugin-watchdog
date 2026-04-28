@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
     enabled: true,
     debug: false,
     watchedAdapters: [],
+    healthCheckInterval: 30,
 };
 
 /**
@@ -31,6 +32,12 @@ export function buildConfigSchema(ctx: NapCatPluginContext): PluginConfigSchema 
             '监控适配器',
             '',
             '填写要监控的适配器名称，多个名称请用英文逗号分隔；留空表示监控全部适配器'
+        ),
+        ctx.NapCatConfig.text(
+            'healthCheckInterval',
+            '轮询检测间隔',
+            '30',
+            '定期调用 get_status 的间隔（秒），仅作为兜底检测；设为 0 不启用轮询。内核事件层不受此影响'
         )
     );
 }

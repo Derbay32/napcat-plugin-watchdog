@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { PluginStatus } from '../types'
-import { IconPower, IconClock, IconActivity, IconDownload, IconRefresh, IconTerminal } from '../components/icons'
+import { IconPower, IconClock, IconActivity, IconDownload, IconRefresh, IconTerminal, IconPlugin } from '../components/icons'
 
 interface StatusPageProps {
     status: PluginStatus | null
@@ -53,6 +53,7 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
     }
 
     const { config, stats } = status
+    const lastCheckText = status.lastBotCheckTime > 0 ? new Date(status.lastBotCheckTime).toLocaleString() : '尚未轮询'
 
     const statCards = [
         {
@@ -61,6 +62,13 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
             icon: <IconPower size={18} />,
             color: config.enabled ? 'text-emerald-500' : 'text-red-400',
             bg: config.enabled ? 'bg-emerald-500/10' : 'bg-red-500/10',
+        },
+        {
+            label: '机器人状态',
+            value: status.botOnline ? '在线' : '离线',
+            icon: <IconPlugin size={18} />,
+            color: status.botOnline ? 'text-emerald-500' : 'text-red-400',
+            bg: status.botOnline ? 'bg-emerald-500/10' : 'bg-red-500/10',
         },
         {
             label: '运行时长',
@@ -87,7 +95,7 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
                 {statCards.map((card) => (
                     <div key={card.label} className="card p-4 hover-lift">
                         <div className="flex items-center justify-between mb-3">
@@ -113,6 +121,11 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                     </button>
                 </div>
                 <div className="space-y-3">
+                    <InfoRow label="机器人 QQ" value={status.selfId || '未知'} />
+                    <InfoRow label="机器人在线" value={status.botOnline ? '在线' : '离线'} />
+                    <InfoRow label="最近状态来源" value={status.lastOnlineSource || '未知'} />
+                    <InfoRow label="最近轮询时间" value={lastCheckText} />
+                    <InfoRow label="轮询检测间隔" value={config.healthCheckInterval > 0 ? `${config.healthCheckInterval} 秒` : '已禁用'} />
                     <InfoRow
                         label="监控适配器"
                         value={config.watchedAdapters.length > 0 ? config.watchedAdapters.join(', ') : '全部适配器'}

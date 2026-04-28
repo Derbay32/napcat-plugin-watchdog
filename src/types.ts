@@ -19,7 +19,18 @@ export interface PluginConfig {
     debug: boolean;
     /** 要监控的适配器名称列表，空数组表示监控全部 */
     watchedAdapters: string[];
+    /** 机器人在线状态兜底轮询间隔（秒），0 表示禁用轮询 */
+    healthCheckInterval: number;
 }
+
+/** 机器人在线状态最近一次变更来源 */
+export type BotOnlineSource =
+    | 'kernel_login'
+    | 'kernel_kicked'
+    | 'onebot_event'
+    | 'onebot_heartbeat'
+    | 'polling'
+    | 'init';
 
 // ==================== API 响应 ====================
 

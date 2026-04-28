@@ -66,6 +66,25 @@ export const plugin_on_config_change: PluginModule['plugin_on_config_change'] = 
     }
 };
 
+export const plugin_onevent: PluginModule['plugin_onevent'] = async (ctx, event) => {
+    const evt = event as {
+        post_type?: string;
+        notice_type?: string;
+        meta_event_type?: string;
+        status?: { online?: boolean };
+    };
+
+    if (evt?.post_type === 'notice' && evt?.notice_type === 'bot_offline') {
+        pluginState.notifyBotOnline(false, 'onebot_event');
+        ctx.logger.warn('(；′⌒`) [Layer3] 收到 bot_offline 事件');
+        return;
+    }
+
+    if (evt?.post_type === 'meta_event' && evt?.meta_event_type === 'heartbeat' && evt?.status?.online === true) {
+        pluginState.notifyBotOnline(true, 'onebot_heartbeat');
+    }
+};
+
 function registerWebUI(ctx: NapCatPluginContext): void {
     const router = ctx.router;
 

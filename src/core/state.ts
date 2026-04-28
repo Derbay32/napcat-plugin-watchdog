@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import type { NapCatPluginContext, PluginLogger } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { DEFAULT_CONFIG } from '../config';
-import type { PluginConfig } from '../types';
+import type { BotOnlineSource, PluginConfig } from '../types';
 
 interface AdapterStatus {
     active: boolean;
@@ -15,6 +15,12 @@ interface AdapterStatus {
 interface NetworkAdapterLike {
     name?: string;
     isActive?: boolean;
+}
+
+interface KernelLoginListenerLike {
+    onLoginConnected?: () => Promise<void> | void;
+    onLoginDisConnected?: (...args: unknown[]) => unknown;
+    [key: string]: unknown;
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -38,6 +44,15 @@ function sanitizeConfig(raw: unknown): PluginConfig {
             .filter(Boolean);
     }
 
+    if (typeof raw.healthCheckInterval === 'number') {
+        out.healthCheckInterval = Math.max(0, Math.min(Math.floor(raw.healthCheckInterval), 86400));
+    } else if (typeof raw.healthCheckInterval === 'string') {
+        const parsed = Number.parseInt(raw.healthCheckInterval, 10);
+        if (!Number.isNaN(parsed)) {
+            out.healthCheckInterval = Math.max(0, Math.min(parsed, 86400));
+        }
+    }
+
     return out;
 }
 
@@ -47,7 +62,13 @@ class PluginState {
     config: PluginConfig = { ...DEFAULT_CONFIG };
     startTime = 0;
     selfId = '';
+    botOnline = false;
+    lastOnlineSource: BotOnlineSource | null = 'init';
+    lastBotCheckTime = 0;
     timers: Map<string, ReturnType<typeof setInterval>> = new Map();
+    private kernelLoginListener: KernelLoginListenerLike | null = null;
+    private kernelLoginListenerId: number | null = null;
+    private kickedOfflineUnsubscribe: (() => void) | null = null;
     stats = {
         processed: 0,
         todayProcessed: 0,
@@ -70,6 +91,92 @@ class PluginState {
         this.loadConfig();
         this.ensureDataDir();
         this.fetchSelfId();
+        this.registerKernelListeners();
+        this.startBotHealthCheck();
+    }
+
+    registerKernelListeners(): void {
+        try {
+            const loginService = this.ctx.core.context.wrapper.NodeIKernelLoginService;
+            const self = this;
+
+            this.kernelLoginListener = {};
+            this.kernelLoginListener.onLoginDisConnected = function (...args: unknown[]) {
+                self.setBotOnline(false, 'kernel_login');
+                self.logger.warn('(；′⌒`) [Layer1] QQ 登录连接已断开', args);
+            };
+            this.kernelLoginListener.onLoginConnected = function () {
+                self.setBotOnline(true, 'kernel_login');
+                self.logger.info('(｡·ω·｡) [Layer1] QQ 登录连接已建立');
+            };
+
+            this.kernelLoginListenerId = loginService.addKernelLoginListener(this.kernelLoginListener as never);
+            this.logger.debug('(｡-ω-) [Layer1] 内核登录监听器已注册');
+        } catch (e) {
+            this.logger.warn('(；′⌒`) [Layer1] 注册内核登录监听器失败:', e);
+        }
+
+        try {
+            this.kickedOfflineUnsubscribe = this.ctx.core.event.on('KickedOffLine', (reason) => {
+                this.setBotOnline(false, 'kernel_kicked');
+                this.logger.warn('(；′⌒`) [Layer2] 检测到被踢下线:', reason);
+            });
+            this.logger.debug('(｡-ω-) [Layer2] KickedOffLine 事件监听已注册');
+        } catch (e) {
+            this.logger.warn('(；′⌒`) [Layer2] 注册 KickedOffLine 事件失败:', e);
+        }
+    }
+
+    startBotHealthCheck(): void {
+        const existing = this.timers.get('bot-health-check');
+        if (existing) {
+            clearInterval(existing);
+            this.timers.delete('bot-health-check');
+            this.logger.debug('(｡-ω-) 已重置机器人在线状态轮询定时器');
+        }
+
+        const intervalSeconds = this.config.healthCheckInterval;
+        if (intervalSeconds <= 0) {
+            this.logger.debug('(｡-ω-) 机器人在线状态轮询已禁用');
+            return;
+        }
+
+        void this.checkBotOnline();
+        const timer = setInterval(() => {
+            void this.checkBotOnline();
+        }, intervalSeconds * 1000);
+        this.timers.set('bot-health-check', timer);
+        this.logger.debug(`(｡-ω-) [Layer4] 机器人在线状态轮询已启动，间隔 ${intervalSeconds} 秒`);
+    }
+
+    private async checkBotOnline(): Promise<void> {
+        try {
+            const result = await this.ctx.actions.call(
+                'get_status',
+                {},
+                this.ctx.adapterName,
+                this.ctx.pluginManager.config
+            ) as { online?: boolean; good?: boolean };
+            this.lastBotCheckTime = Date.now();
+            this.setBotOnline(Boolean(result?.online), 'polling');
+        } catch (e) {
+            this.logger.warn('(；′⌒`) [Layer4] get_status 调用失败，保持上次状态:', e);
+        }
+    }
+
+    setBotOnline(online: boolean, source: BotOnlineSource): void {
+        if (this.botOnline === online) return;
+        this.botOnline = online;
+        this.lastOnlineSource = source;
+        if (online) {
+            this.logger.info(`(｡·ω·｡) 机器人状态恢复为在线 [来源:${source}]`);
+        } else {
+            this.logger.warn(`(；′⌒\`) 机器人状态变更为离线 [来源:${source}]`);
+        }
+    }
+
+    notifyBotOnline(online: boolean, source: BotOnlineSource): void {
+        this.setBotOnline(online, source);
     }
 
     private async fetchSelfId(): Promise<void> {
@@ -95,6 +202,29 @@ class PluginState {
             this.logger.debug(`(｡-ω-) 清理定时器: ${jobId}`);
         }
         this.timers.clear();
+
+        if (this.kernelLoginListenerId !== null) {
+            try {
+                this.ctx.core.context.wrapper.NodeIKernelLoginService
+                    .removeKernelLoginListener(this.kernelLoginListenerId);
+                this.logger.debug('(｡-ω-) [Layer1] 内核登录监听器已移除');
+            } catch (e) {
+                this.logger.warn('(；′⌒`) [Layer1] 移除内核登录监听器失败:', e);
+            }
+            this.kernelLoginListenerId = null;
+            this.kernelLoginListener = null;
+        }
+
+        if (this.kickedOfflineUnsubscribe) {
+            try {
+                this.kickedOfflineUnsubscribe();
+                this.logger.debug('(｡-ω-) [Layer2] KickedOffLine 事件监听已移除');
+            } catch (e) {
+                this.logger.warn('(；′⌒`) [Layer2] 移除 KickedOffLine 事件监听失败:', e);
+            }
+            this.kickedOfflineUnsubscribe = null;
+        }
+
         this.saveConfig();
         this._ctx = null;
     }
@@ -168,13 +298,21 @@ class PluginState {
     }
 
     updateConfig(partial: Partial<PluginConfig>): void {
+        const previousInterval = this.config.healthCheckInterval;
         this.config = sanitizeConfig({ ...this.config, ...partial });
         this.saveConfig();
+        if (this._ctx && previousInterval !== this.config.healthCheckInterval) {
+            this.startBotHealthCheck();
+        }
     }
 
     replaceConfig(config: PluginConfig): void {
+        const previousInterval = this.config.healthCheckInterval;
         this.config = sanitizeConfig(config);
         this.saveConfig();
+        if (this._ctx && previousInterval !== this.config.healthCheckInterval) {
+            this.startBotHealthCheck();
+        }
     }
 
     getAdapterStatuses(): Map<string, AdapterStatus> {

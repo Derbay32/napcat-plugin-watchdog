@@ -82,6 +82,13 @@ export default function ConfigPage() {
                             v.split(',').map(item => item.trim()).filter(Boolean)
                         )}
                     />
+                    <InputRow
+                        label="轮询检测间隔"
+                        desc="定期调用 get_status 的间隔（秒），仅作为兜底检测；设为 0 不启用轮询"
+                        type="number"
+                        value={String(config.healthCheckInterval)}
+                        onChange={(v) => updateField('healthCheckInterval', Math.max(0, Math.floor(Number(v) || 0)))}
+                    />
                 </div>
             </div>
 
